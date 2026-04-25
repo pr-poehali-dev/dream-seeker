@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAppData } from "./store";
-import { AppData, Task, Habit } from "./types";
+import { AppData, Task, Habit, TaskList } from "./types";
 import Sidebar from "./Sidebar";
 import TaskView from "./TaskView";
 import HabitsView from "./HabitsView";
@@ -14,19 +14,18 @@ export default function PlannerApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
 
   function getFilteredTasks(): Task[] {
     if (activeView.type === "habits") return [];
     if (activeView.type === "time") {
       const id = activeView.id;
-      if (id === "inbox") return data.tasks.filter(t => !t.date && !t.completed && t.categoryId === "inbox");
+      // inbox: задачи без listId и без даты
+      if (id === "inbox") return data.tasks.filter(t => !t.listId && !t.completed);
       if (id === "today") return data.tasks.filter(t => t.date === today && !t.completed);
-      if (id === "tomorrow") {
-        const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
-        return data.tasks.filter(t => t.date === tomorrow && !t.completed);
-      }
+      if (id === "tomorrow") return data.tasks.filter(t => t.date === tomorrow && !t.completed);
       if (id === "planned") return data.tasks.filter(t => t.date && t.date > today && !t.completed);
-      if (id === "someday") return data.tasks.filter(t => !t.date && !t.completed && t.categoryId !== "inbox");
+      if (id === "someday") return data.tasks.filter(t => !t.date && !t.completed);
       if (id === "done") return data.tasks.filter(t => t.completed);
     }
     if (activeView.type === "direction") {
@@ -63,6 +62,22 @@ export default function PlannerApp() {
     setData(d => ({ ...d, tasks: d.tasks.filter(t => t.id !== id) }));
   }
 
+  function addList(list: TaskList) {
+    setData(d => ({ ...d, lists: [...d.lists, list] }));
+  }
+
+  function updateList(list: TaskList) {
+    setData(d => ({ ...d, lists: d.lists.map(l => l.id === list.id ? list : l) }));
+  }
+
+  function deleteList(id: string) {
+    setData(d => ({
+      ...d,
+      lists: d.lists.filter(l => l.id !== id),
+      tasks: d.tasks.map(t => t.listId === id ? { ...t, listId: undefined } : t),
+    }));
+  }
+
   function updateHabit(habit: Habit) {
     setData(d => ({ ...d, habits: d.habits.map(h => h.id === habit.id ? habit : h) }));
   }
@@ -83,7 +98,6 @@ export default function PlannerApp() {
 
   return (
     <div className="planner-root">
-      {/* Mobile header */}
       <header className="planner-header">
         <button className="planner-menu-btn" onClick={() => setSidebarOpen(true)}>
           <Icon name="Menu" size={22} />
@@ -95,7 +109,6 @@ export default function PlannerApp() {
         <div className="w-8" />
       </header>
 
-      {/* Sidebar overlay */}
       {sidebarOpen && (
         <div className="planner-overlay" onClick={() => setSidebarOpen(false)} />
       )}
@@ -109,7 +122,6 @@ export default function PlannerApp() {
         onUpdateData={updateData}
       />
 
-      {/* Main content */}
       <main className="planner-main">
         {activeView.type === "habits" ? (
           <HabitsView
@@ -126,6 +138,11 @@ export default function PlannerApp() {
             onAdd={addTask}
             onUpdate={updateTask}
             onDelete={deleteTask}
+            onAddList={addList}
+            onUpdateList={updateList}
+            onDeleteList={deleteList}
+            onAddHabit={addHabit}
+            onUpdateHabit={updateHabit}
           />
         )}
       </main>

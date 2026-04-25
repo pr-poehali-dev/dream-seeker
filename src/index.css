@@ -344,18 +344,228 @@
 }
 .task-card--done {
   opacity: 0.55;
-  animation: task-complete 0.4s ease-out;
 }
 
-@keyframes task-complete {
-  0% {
-    transform: scale(1);
+.task-card--done .task-card-title {
+  text-decoration: line-through;
+  text-decoration-color: hsl(var(--muted-foreground));
+  animation: strikethrough 0.4s ease-out forwards;
+}
+
+.task-card--leaving {
+  animation: task-leave 0.42s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes strikethrough {
+  from {
+    text-decoration-color: transparent;
+    opacity: 1;
   }
-  30% {
-    transform: scale(0.98);
+  to {
+    text-decoration-color: hsl(var(--muted-foreground));
+    opacity: 0.7;
+  }
+}
+
+@keyframes task-leave {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scaleY(1);
+    max-height: 120px;
+  }
+  40% {
+    opacity: 0.6;
+    transform: translateX(8px) scaleY(0.95);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(48px) scaleY(0.4);
+    max-height: 0;
+    margin-bottom: 0;
+    padding: 0;
+  }
+}
+
+/* Task list group (for direction views) */
+.task-list-group {
+  background: #fff;
+  border-radius: 18px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.task-list-group--free {
+  background: hsl(var(--secondary));
+  box-shadow: none;
+  border: 1.5px dashed hsl(var(--border));
+}
+
+.task-list-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 14px 10px;
+  color: hsl(var(--muted-foreground));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.task-list-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  flex: 1;
+  letter-spacing: 0.01em;
+}
+
+.task-list-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--secondary));
+  border-radius: 8px;
+  padding: 1px 7px;
+}
+
+.task-list-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.task-list-edit-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: hsl(var(--muted-foreground));
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.task-list-edit-btn:hover {
+  background: hsl(var(--secondary));
+  color: hsl(var(--foreground));
+}
+
+.task-list-group .task-list {
+  padding: 6px 6px;
+}
+
+.task-list-group .task-card {
+  border-radius: 12px;
+  box-shadow: none;
+  border: 1px solid hsl(var(--border));
+  margin-bottom: 4px;
+}
+
+.task-list-empty {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  text-align: center;
+}
+
+.task-list-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  width: 100%;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  transition:
+    background 0.15s,
+    color 0.15s;
+  text-align: left;
+}
+.task-list-add-btn:hover {
+  background: hsl(var(--secondary));
+  color: hsl(var(--foreground));
+}
+
+/* FAB list option */
+.fab-option--list {
+  background: #86efac;
+  color: #1a1a1a;
+  animation-delay: 0.06s;
+}
+.fab-option--habit {
+  animation-delay: 0.12s;
+}
+
+/* Habits bar (mini block at top of today/tomorrow) */
+.habits-bar {
+  background: #fff;
+  border-radius: 18px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.habits-bar-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: hsl(var(--muted-foreground));
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 10px;
+}
+
+.habits-bar-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.habits-bar-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 20px;
+  border: 1.5px solid hsl(var(--border));
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: hsl(var(--foreground));
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.habits-bar-item:hover {
+  transform: scale(1.04);
+}
+.habits-bar-item--done {
+  border-color: transparent;
+  animation: habit-bar-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.habits-bar-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+@keyframes habit-bar-pop {
+  0% {
+    transform: scale(0.9);
   }
   60% {
-    transform: scale(1.01);
+    transform: scale(1.08);
   }
   100% {
     transform: scale(1);

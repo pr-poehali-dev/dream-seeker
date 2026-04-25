@@ -1,26 +1,29 @@
 import { useState, useEffect } from "react";
 import { AppData } from "./types";
 
+const today = new Date().toISOString().split("T")[0];
+const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+
 const DEFAULT_DATA: AppData = {
   tasks: [
     {
       id: "t1",
-      title: "Пробежка утром",
+      title: "Утренняя пробежка",
       completed: false,
-      date: new Date().toISOString().split("T")[0],
+      date: today,
       priorityId: "p1",
-      categoryId: "today",
-      listId: undefined,
+      categoryId: "dir-sport",
+      listId: "l1",
       subtasks: [],
       notes: "",
     },
     {
       id: "t2",
-      title: "Прочитать 20 страниц книги",
-      completed: true,
-      date: new Date().toISOString().split("T")[0],
+      title: "Прочитать 20 страниц",
+      completed: false,
+      date: today,
       priorityId: "p3",
-      categoryId: "today",
+      categoryId: "dir-study",
       listId: undefined,
       subtasks: [],
       notes: "",
@@ -29,20 +32,32 @@ const DEFAULT_DATA: AppData = {
       id: "t3",
       title: "Подготовить презентацию",
       completed: false,
-      date: new Date(Date.now() + 86400000).toISOString().split("T")[0],
+      date: tomorrow,
       priorityId: "p2",
-      categoryId: "tomorrow",
-      listId: undefined,
+      categoryId: "dir-study",
+      listId: "l2",
       subtasks: [
         { id: "s1", title: "Собрать данные", completed: true },
         { id: "s2", title: "Оформить слайды", completed: false },
       ],
       notes: "",
     },
+    {
+      id: "t4",
+      title: "Купить продукты",
+      completed: false,
+      date: undefined,
+      priorityId: undefined,
+      categoryId: "dir-personal",
+      listId: "l3",
+      subtasks: [],
+      notes: "",
+    },
   ],
   lists: [
-    { id: "l1", name: "Продукты", categoryId: "dir-personal" },
+    { id: "l1", name: "Тренировки", categoryId: "dir-sport" },
     { id: "l2", name: "Учебный план", categoryId: "dir-study" },
+    { id: "l3", name: "Покупки", categoryId: "dir-personal" },
   ],
   timeCategories: [
     { id: "inbox", name: "Входящие", icon: "Inbox", type: "time" },
@@ -65,34 +80,13 @@ const DEFAULT_DATA: AppData = {
     { id: "p4", name: "Низкий", color: "#D1D5DB" },
   ],
   habits: [
-    {
-      id: "h1",
-      name: "Медитация",
-      icon: "Brain",
-      color: "#C4B5FD",
-      completedDates: [],
-      targetDays: 7,
-    },
-    {
-      id: "h2",
-      name: "Вода 2л",
-      icon: "Droplets",
-      color: "#93C5FD",
-      completedDates: [new Date().toISOString().split("T")[0]],
-      targetDays: 7,
-    },
-    {
-      id: "h3",
-      name: "Спорт",
-      icon: "Dumbbell",
-      color: "#86EFAC",
-      completedDates: [],
-      targetDays: 5,
-    },
+    { id: "h1", name: "Медитация", icon: "Brain", color: "#C4B5FD", completedDates: [], targetDays: 7 },
+    { id: "h2", name: "Вода 2л", icon: "Droplets", color: "#93C5FD", completedDates: [today], targetDays: 7 },
+    { id: "h3", name: "Спорт", icon: "Dumbbell", color: "#86EFAC", completedDates: [], targetDays: 5 },
   ],
 };
 
-const STORAGE_KEY = "planner_data_v1";
+const STORAGE_KEY = "planner_data_v2";
 
 export function useAppData() {
   const [data, setData] = useState<AppData>(() => {

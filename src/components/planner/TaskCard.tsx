@@ -5,15 +5,18 @@ import Icon from "@/components/ui/icon";
 interface Props {
   task: Task;
   data: AppData;
+  showDate?: boolean;
   onToggle: () => void;
   onUpdate: (task: Task) => void;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-export default function TaskCard({ task, data, onToggle, onUpdate, onEdit, onDelete }: Props) {
+export default function TaskCard({ task, data, showDate, onToggle, onUpdate, onEdit, onDelete }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [checkAnim, setCheckAnim] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const [visible, setVisible] = useState(true);
 
   const priority = data.priorities.find(p => p.id === task.priorityId);
   const direction = data.directionCategories.find(c => c.id === task.categoryId);
@@ -22,31 +25,41 @@ export default function TaskCard({ task, data, onToggle, onUpdate, onEdit, onDel
   function formatDate(dateStr?: string): string {
     if (!dateStr) return "";
     const d = new Date(dateStr + "T00:00:00");
-    const today = new Date();
-    const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1);
-    if (d.toDateString() === today.toDateString()) return "Сегодня";
-    if (d.toDateString() === tomorrow.toDateString()) return "Завтра";
+    const todayDate = new Date();
+    const tomorrowDate = new Date(); tomorrowDate.setDate(todayDate.getDate() + 1);
+    if (d.toDateString() === todayDate.toDateString()) return "Сегодня";
+    if (d.toDateString() === tomorrowDate.toDateString()) return "Завтра";
     return d.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
   }
 
   function handleToggle() {
-    if (!task.completed) {
-      setCheckAnim(true);
-      setTimeout(() => setCheckAnim(false), 600);
+    if (task.completed) {
+      onToggle();
+      return;
     }
-    onToggle();
+    setCheckAnim(true);
+    setTimeout(() => setCheckAnim(false), 600);
+    // Запускаем анимацию ухода
+    setTimeout(() => {
+      setLeaving(true);
+      setTimeout(() => {
+        setVisible(false);
+        onToggle();
+      }, 450);
+    }, 350);
   }
 
   function toggleSubtask(subId: string) {
-    const updated = {
+    onUpdate({
       ...task,
       subtasks: task.subtasks.map(s => s.id === subId ? { ...s, completed: !s.completed } : s),
-    };
-    onUpdate(updated);
+    });
   }
 
+  if (!visible) return null;
+
   return (
-    <div className={`task-card ${task.completed ? "task-card--done" : ""}`}>
+    <div className={`task-card ${task.completed ? "task-card--done" : ""} ${leaving ? "task-card--leaving" : ""}`}>
       <div className="task-card-main">
         <button
           className={`task-check ${task.completed ? "task-check--done" : ""} ${checkAnim ? "task-check--flash" : ""}`}
@@ -68,14 +81,14 @@ export default function TaskCard({ task, data, onToggle, onUpdate, onEdit, onDel
           </div>
 
           <div className="task-card-meta">
-            {task.date && (
+            {showDate && task.date && (
               <span className="task-meta-chip">
                 <Icon name="Calendar" size={11} />
                 {formatDate(task.date)}
               </span>
             )}
             {direction && (
-              <span className="task-meta-chip" style={{ background: direction.color + "33", color: "inherit" }}>
+              <span className="task-meta-chip" style={{ background: direction.color + "22" }}>
                 <span className="task-meta-dot" style={{ background: direction.color }} />
                 {direction.name}
               </span>

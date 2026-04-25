@@ -12,15 +12,18 @@ interface Props {
   onAdd: (task: Task) => void;
   onUpdate: (task: Task) => void;
   onDelete: (id: string) => void;
+  onOpenHabitModal?: () => void;
 }
 
-export default function TaskView({ tasks, data, activeView, onAdd, onUpdate, onDelete }: Props) {
+export default function TaskView({ tasks, data, activeView, onAdd, onUpdate, onDelete, onOpenHabitModal }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const [fabOpen, setFabOpen] = useState(false);
 
   function openNew() {
     setEditTask(null);
     setModalOpen(true);
+    setFabOpen(false);
   }
 
   function openEdit(task: Task) {
@@ -59,9 +62,9 @@ export default function TaskView({ tasks, data, activeView, onAdd, onUpdate, onD
     <div className="task-view">
       {isEmpty ? (
         <div className="task-view-empty">
-          <Icon name="CheckCircle2" size={40} className="task-view-empty-icon" />
+          <Icon name="CheckCircle2" size={44} className="task-view-empty-icon" />
           <p>Нет задач</p>
-          <span>Добавьте первую задачу</span>
+          <span>Нажмите «+» чтобы добавить</span>
         </div>
       ) : (
         <div className="task-list">
@@ -71,6 +74,7 @@ export default function TaskView({ tasks, data, activeView, onAdd, onUpdate, onD
               task={task}
               data={data}
               onToggle={() => onUpdate({ ...task, completed: !task.completed })}
+              onUpdate={onUpdate}
               onEdit={() => openEdit(task)}
               onDelete={() => onDelete(task.id)}
             />
@@ -78,9 +82,31 @@ export default function TaskView({ tasks, data, activeView, onAdd, onUpdate, onD
         </div>
       )}
 
-      <button className="planner-fab" onClick={openNew}>
-        <Icon name="Plus" size={24} />
-      </button>
+      {/* FAB with spread menu */}
+      {fabOpen && <div className="fab-backdrop" onClick={() => setFabOpen(false)} />}
+
+      <div className="fab-container">
+        {fabOpen && (
+          <>
+            <button className="fab-option fab-option--task" onClick={openNew}>
+              <Icon name="CheckSquare" size={18} />
+              <span>Задача</span>
+            </button>
+            {onOpenHabitModal && (
+              <button className="fab-option fab-option--habit" onClick={() => { onOpenHabitModal(); setFabOpen(false); }}>
+                <Icon name="Activity" size={18} />
+                <span>Привычка</span>
+              </button>
+            )}
+          </>
+        )}
+        <button
+          className={`planner-fab ${fabOpen ? "planner-fab--open" : ""}`}
+          onClick={() => setFabOpen(o => !o)}
+        >
+          <Icon name="Plus" size={24} />
+        </button>
+      </div>
 
       {modalOpen && (
         <TaskModal

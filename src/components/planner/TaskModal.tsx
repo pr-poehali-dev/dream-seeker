@@ -15,6 +15,23 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+const DATE_PRESETS = [
+  { label: "Сегодня", icon: "Sun", getValue: () => new Date().toISOString().split("T")[0] },
+  { label: "Завтра", icon: "Sunset", getValue: () => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().split("T")[0]; } },
+  { label: "Неделя", icon: "CalendarDays", getValue: () => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().split("T")[0]; } },
+  { label: "Когда-нибудь", icon: "Sparkles", getValue: () => "" },
+];
+
+function formatDateDisplay(dateStr: string): string {
+  if (!dateStr) return "Когда-нибудь";
+  const d = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  const tomorrow = new Date(); tomorrow.setDate(today.getDate() + 1);
+  if (d.toDateString() === today.toDateString()) return "Сегодня";
+  if (d.toDateString() === tomorrow.toDateString()) return "Завтра";
+  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+}
+
 export default function TaskModal({ task, data, defaultDate, defaultCategory, onSave, onClose }: Props) {
   const [title, setTitle] = useState(task?.title ?? "");
   const [date, setDate] = useState(task?.date ?? defaultDate);
@@ -23,6 +40,7 @@ export default function TaskModal({ task, data, defaultDate, defaultCategory, on
   const [notes, setNotes] = useState(task?.notes ?? "");
   const [subtasks, setSubtasks] = useState<SubTask[]>(task?.subtasks ?? []);
   const [newSub, setNewSub] = useState("");
+  const [showCalendar, setShowCalendar] = useState(false);
 
   function addSubtask() {
     if (!newSub.trim()) return;
@@ -52,91 +70,140 @@ export default function TaskModal({ task, data, defaultDate, defaultCategory, on
     });
   }
 
+  const selectedPriority = data.priorities.find(p => p.id === priorityId);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-sheet" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <span className="modal-title">{task ? "Редактировать задачу" : "Новая задача"}</span>
-          <button className="modal-close" onClick={onClose}>
-            <Icon name="X" size={18} />
-          </button>
-        </div>
+        {/* Drag handle */}
+        <div className="modal-drag-handle" />
 
         <div className="modal-body">
           <input
-            className="modal-input"
-            placeholder="Название задачи"
+            className="modal-title-input"
+            placeholder="Что нужно сделать?"
             value={title}
             onChange={e => setTitle(e.target.value)}
             autoFocus
           />
 
-          <div className="modal-row">
-            <div className="modal-field">
-              <label className="modal-label">
-                <Icon name="Calendar" size={14} /> Дата
-              </label>
-              <input
-                type="date"
-                className="modal-input"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-              />
+          {/* Date row */}
+          <div className="modal-section">
+            <div className="modal-section-label">
+              <Icon name="Calendar" size={14} />
+              Дата выполнения
             </div>
-
-            <div className="modal-field">
-              <label className="modal-label">
-                <Icon name="Flag" size={14} /> Приоритет
-              </label>
-              <select
-                className="modal-select"
-                value={priorityId}
-                onChange={e => setPriorityId(e.target.value)}
+            <div className="modal-chips-row">
+              {DATE_PRESETS.map(preset => {
+                const val = preset.getValue();
+                const isActive = date === val || (preset.label === "Когда-нибудь" && !date);
+                return (
+                  <button
+                    key={preset.label}
+                    className={`modal-chip ${isActive ? "modal-chip--active" : ""}`}
+                    onClick={() => { setDate(val); setShowCalendar(false); }}
+                  >
+                    <Icon name={preset.icon} size={13} />
+                    {preset.label}
+                  </button>
+                );
+              })}
+              <button
+                className={`modal-chip ${showCalendar ? "modal-chip--active" : ""}`}
+                onClick={() => setShowCalendar(v => !v)}
               >
-                <option value="">Не задан</option>
-                {data.priorities.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+                <Icon name="CalendarSearch" size={13} />
+                Выбрать
+              </button>
+            </div>
+            {showCalendar && (
+              <div className="modal-calendar-wrap">
+                <input
+                  type="date"
+                  className="modal-date-native"
+                  value={date}
+                  onChange={e => { setDate(e.target.value); setShowCalendar(false); }}
+                />
+              </div>
+            )}
+            {date && (
+              <div className="modal-date-display">
+                <Icon name="CalendarCheck" size={13} />
+                {formatDateDisplay(date)}
+              </div>
+            )}
+          </div>
+
+          {/* Priority */}
+          <div className="modal-section">
+            <div className="modal-section-label">
+              <Icon name="Flag" size={14} />
+              Приоритет
+            </div>
+            <div className="modal-chips-row">
+              <button
+                className={`modal-chip ${!priorityId ? "modal-chip--active" : ""}`}
+                onClick={() => setPriorityId("")}
+              >
+                Нет
+              </button>
+              {data.priorities.map(p => (
+                <button
+                  key={p.id}
+                  className={`modal-chip modal-chip--priority ${priorityId === p.id ? "modal-chip--priority-active" : ""}`}
+                  style={priorityId === p.id
+                    ? { background: p.color, color: "#1a1a1a", borderColor: p.color }
+                    : { borderColor: p.color + "88" }
+                  }
+                  onClick={() => setPriorityId(p.id)}
+                >
+                  <span className="chip-dot" style={{ background: p.color }} />
+                  {p.name}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div className="modal-field">
-            <label className="modal-label">
-              <Icon name="Tag" size={14} /> Направление
-            </label>
-            <select
-              className="modal-select"
-              value={categoryId}
-              onChange={e => setCategoryId(e.target.value)}
-            >
-              <option value="">Не выбрано</option>
+          {/* Direction */}
+          <div className="modal-section">
+            <div className="modal-section-label">
+              <Icon name="Tag" size={14} />
+              Направление
+            </div>
+            <div className="modal-chips-row">
+              <button
+                className={`modal-chip ${!categoryId ? "modal-chip--active" : ""}`}
+                onClick={() => setCategoryId("")}
+              >
+                Нет
+              </button>
               {data.directionCategories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <button
+                  key={c.id}
+                  className={`modal-chip ${categoryId === c.id ? "modal-chip--active" : ""}`}
+                  style={categoryId === c.id ? { background: c.color, color: "#1a1a1a", borderColor: c.color } : { borderColor: c.color + "88" }}
+                  onClick={() => setCategoryId(c.id)}
+                >
+                  <span className="chip-dot" style={{ background: c.color }} />
+                  {c.name}
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
-          <div className="modal-field">
-            <label className="modal-label">
-              <Icon name="ListChecks" size={14} /> Подзадачи
-            </label>
-            <div className="subtask-input-row">
-              <input
-                className="modal-input"
-                placeholder="Добавить подзадачу..."
-                value={newSub}
-                onChange={e => setNewSub(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") addSubtask(); }}
-              />
-              <button className="subtask-add-btn" onClick={addSubtask}>
-                <Icon name="Plus" size={16} />
-              </button>
+          {/* Subtasks */}
+          <div className="modal-section">
+            <div className="modal-section-label">
+              <Icon name="ListChecks" size={14} />
+              Подзадачи
             </div>
             {subtasks.map(st => (
               <div key={st.id} className="subtask-edit-row">
-                <button onClick={() => toggleSub(st.id)} className={`task-check task-check--sm ${st.completed ? "task-check--done" : ""}`}>
-                  {st.completed && <Icon name="Check" size={10} />}
+                <button
+                  onClick={() => toggleSub(st.id)}
+                  className={`subtask-check ${st.completed ? "subtask-check--done" : ""}`}
+                >
+                  {st.completed && <Icon name="Check" size={9} />}
                 </button>
                 <span className={`subtask-edit-title ${st.completed ? "subtask-title--done" : ""}`}>{st.title}</span>
                 <button onClick={() => removeSub(st.id)} className="task-action-btn task-action-btn--danger">
@@ -144,18 +211,34 @@ export default function TaskModal({ task, data, defaultDate, defaultCategory, on
                 </button>
               </div>
             ))}
+            <div className="subtask-input-row">
+              <input
+                className="modal-input-sm"
+                placeholder="+ Добавить подзадачу"
+                value={newSub}
+                onChange={e => setNewSub(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") addSubtask(); }}
+              />
+              {newSub && (
+                <button className="subtask-add-btn" onClick={addSubtask}>
+                  <Icon name="Plus" size={16} />
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="modal-field">
-            <label className="modal-label">
-              <Icon name="StickyNote" size={14} /> Заметки
-            </label>
+          {/* Notes */}
+          <div className="modal-section">
+            <div className="modal-section-label">
+              <Icon name="StickyNote" size={14} />
+              Заметки
+            </div>
             <textarea
               className="modal-textarea"
               placeholder="Дополнительные заметки..."
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              rows={3}
+              rows={2}
             />
           </div>
         </div>
@@ -163,7 +246,7 @@ export default function TaskModal({ task, data, defaultDate, defaultCategory, on
         <div className="modal-footer">
           <button className="modal-btn-cancel" onClick={onClose}>Отмена</button>
           <button className="modal-btn-save" onClick={handleSave} disabled={!title.trim()}>
-            Сохранить
+            {task ? "Сохранить" : "Создать задачу"}
           </button>
         </div>
       </div>

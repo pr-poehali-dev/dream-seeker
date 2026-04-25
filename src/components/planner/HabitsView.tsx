@@ -7,10 +7,12 @@ interface Props {
   onUpdate: (habit: Habit) => void;
   onAdd: (habit: Habit) => void;
   onDelete: (id: string) => void;
+  fabOpen?: boolean;
+  onFabClose?: () => void;
 }
 
 const HABIT_COLORS = ["#C4B5FD", "#93C5FD", "#86EFAC", "#FDE68A", "#FCA5A5", "#F9A8D4", "#6EE7B7"];
-const HABIT_ICONS = ["Brain", "Droplets", "Dumbbell", "BookOpen", "Heart", "Moon", "Coffee", "Leaf", "Music", "Star"];
+const HABIT_ICONS = ["Brain", "Droplets", "Dumbbell", "BookOpen", "Heart", "Moon", "Coffee", "Leaf", "Music", "Star", "Bike", "Wind"];
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
@@ -34,14 +36,21 @@ export default function HabitsView({ habits, onUpdate, onAdd, onDelete }: Props)
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("Star");
   const [newColor, setNewColor] = useState(HABIT_COLORS[0]);
+  const [fabOpen, setFabOpen] = useState(false);
+  const [flashId, setFlashId] = useState<string | null>(null);
 
   const today = new Date().toISOString().split("T")[0];
   const last7 = getLast7Days();
 
   function toggleDay(habit: Habit, dateStr: string) {
-    const dates = habit.completedDates.includes(dateStr)
+    const wasCompleted = habit.completedDates.includes(dateStr);
+    const dates = wasCompleted
       ? habit.completedDates.filter(d => d !== dateStr)
       : [...habit.completedDates, dateStr];
+    if (!wasCompleted && dateStr === today) {
+      setFlashId(habit.id);
+      setTimeout(() => setFlashId(null), 700);
+    }
     onUpdate({ ...habit, completedDates: dates });
   }
 
@@ -71,7 +80,10 @@ export default function HabitsView({ habits, onUpdate, onAdd, onDelete }: Props)
       targetDays: 7,
     });
     setNewName("");
+    setNewIcon("Star");
+    setNewColor(HABIT_COLORS[0]);
     setAddingOpen(false);
+    setFabOpen(false);
   }
 
   return (
@@ -87,33 +99,48 @@ export default function HabitsView({ habits, onUpdate, onAdd, onDelete }: Props)
       </div>
 
       <div className="habits-list">
+        {habits.length === 0 && !addingOpen && (
+          <div className="task-view-empty">
+            <Icon name="Activity" size={44} className="task-view-empty-icon" />
+            <p>Нет привычек</p>
+            <span>Нажмите «+» чтобы добавить</span>
+          </div>
+        )}
         {habits.map(habit => {
           const streak = getStreak(habit);
           const doneToday = habit.completedDates.includes(today);
+          const isFlashing = flashId === habit.id;
           return (
-            <div key={habit.id} className="habit-card">
+            <div key={habit.id} className={`habit-card ${doneToday ? "habit-card--done" : ""}`}>
               <div className="habit-card-left">
-                <span className="habit-icon" style={{ background: habit.color + "33" }}>
-                  <Icon name={habit.icon} size={18} style={{ color: habit.color }} />
+                <span
+                  className={`habit-icon ${doneToday ? "habit-icon--done" : ""} ${isFlashing ? "habit-icon--flash" : ""}`}
+                  style={{ background: doneToday ? habit.color : habit.color + "33" }}
+                >
+                  <Icon name={habit.icon} size={18} style={{ color: doneToday ? "#fff" : habit.color }} />
                 </span>
                 <div className="habit-info">
                   <span className="habit-name">{habit.name}</span>
                   <span className="habit-streak">
                     <Icon name="Flame" size={12} style={{ color: streak > 0 ? "#F97316" : "#D1D5DB" }} />
-                    {streak} дн.
+                    {streak > 0 ? `${streak} дн. подряд` : "нет серии"}
                   </span>
                 </div>
               </div>
               <div className="habit-days">
-                {last7.map(d => (
-                  <button
-                    key={d}
-                    className={`habit-day-btn ${habit.completedDates.includes(d) ? "habit-day-btn--done" : ""}`}
-                    style={habit.completedDates.includes(d) ? { background: habit.color } : {}}
-                    onClick={() => toggleDay(habit, d)}
-                    title={d}
-                  />
-                ))}
+                {last7.map(d => {
+                  const done = habit.completedDates.includes(d);
+                  const isToday = d === today;
+                  return (
+                    <button
+                      key={d}
+                      className={`habit-day-btn ${done ? "habit-day-btn--done" : ""} ${isToday ? "habit-day-btn--today" : ""}`}
+                      style={done ? { background: habit.color, borderColor: habit.color } : {}}
+                      onClick={() => toggleDay(habit, d)}
+                      title={d}
+                    />
+                  );
+                })}
               </div>
               <button className="habit-delete-btn" onClick={() => onDelete(habit.id)}>
                 <Icon name="Trash2" size={13} />
@@ -123,16 +150,19 @@ export default function HabitsView({ habits, onUpdate, onAdd, onDelete }: Props)
         })}
       </div>
 
-      {addingOpen ? (
+      {addingOpen && (
         <div className="habit-add-form">
           <input
-            className="modal-input"
+            className="modal-title-input"
             placeholder="Название привычки"
             value={newName}
             autoFocus
             onChange={e => setNewName(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") saveNewHabit(); }}
           />
+          <div className="modal-section-label" style={{ marginTop: 4 }}>
+            <Icon name="Smile" size={14} /> Иконка
+          </div>
           <div className="habit-add-icons">
             {HABIT_ICONS.map(ic => (
               <button
@@ -143,6 +173,9 @@ export default function HabitsView({ habits, onUpdate, onAdd, onDelete }: Props)
                 <Icon name={ic} size={16} />
               </button>
             ))}
+          </div>
+          <div className="modal-section-label" style={{ marginTop: 4 }}>
+            <Icon name="Palette" size={14} /> Цвет
           </div>
           <div className="habit-add-colors">
             {HABIT_COLORS.map(c => (
@@ -159,11 +192,24 @@ export default function HabitsView({ habits, onUpdate, onAdd, onDelete }: Props)
             <button className="modal-btn-save" onClick={saveNewHabit} disabled={!newName.trim()}>Добавить</button>
           </div>
         </div>
-      ) : (
-        <button className="planner-fab" onClick={() => setAddingOpen(true)}>
+      )}
+
+      {/* FAB */}
+      {fabOpen && <div className="fab-backdrop" onClick={() => setFabOpen(false)} />}
+      <div className="fab-container">
+        {fabOpen && (
+          <button className="fab-option fab-option--habit" onClick={() => { setAddingOpen(true); setFabOpen(false); }}>
+            <Icon name="Activity" size={18} />
+            <span>Привычка</span>
+          </button>
+        )}
+        <button
+          className={`planner-fab ${fabOpen ? "planner-fab--open" : ""}`}
+          onClick={() => setFabOpen(o => !o)}
+        >
           <Icon name="Plus" size={24} />
         </button>
-      )}
+      </div>
     </div>
   );
 }
